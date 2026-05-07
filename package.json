@@ -6,10 +6,10 @@
   "scripts": {
     "start": "node -r module-alias/register src/server.js",
     "dev": "nodemon --exec \"node -r module-alias/register\" src/server.js",
-    "lint": "eslint src/ tests/",
-    "lint:fix": "eslint src/ tests/ --fix",
-    "test:unit": "jest --runInBand",
-    "test": "jest --coverage --forceExit --detectOpenHandles"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test:unit": "jest --runInBand --passWithNoTests",
+    "test": "jest --coverage --forceExit --detectOpenHandles --passWithNoTests"
   },
   "_moduleAliases": {
     "@": "src"
@@ -40,7 +40,10 @@
     "winston": "^3.13.0"
   },
   "devDependencies": {
-    "eslint": "^8.57.0",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.3.0",
+    "eslint-plugin-jest": "^29.15.2",
+    "globals": "^15.0.0",
     "jest": "^29.7.0",
     "nodemon": "^3.1.4",
     "supertest": "^7.0.0"

@@ -5,18 +5,9 @@ const emailService = require('./emailService');
 const config = require('@/config');
 const { validateEmail, validateRepo, validateToken } = require('@/validators/subscription');
 const logger = require('@/utils/logger');
+const { createError, assertValid } = require('@/utils/validation');
 const { SUBSCRIPTION_MESSAGES } = require('@/constants/messages');
 
-function createError(message, statusCode) {
-    const err = new Error(message);
-    err.statusCode = statusCode;
-    err.expose = true;
-    return err;
-}
-
-function assertValid(check) {
-    if (!check.valid) throw createError(check.error, 400);
-}
 
 async function subscribe(email, repo) {
     assertValid(validateEmail(email));
@@ -26,10 +17,14 @@ async function subscribe(email, repo) {
     const normalizedRepo = repo.trim();
 
     const existing = await subscriptionRepo.findByEmailAndRepo(normalizedEmail, normalizedRepo);
-    if (existing) throw createError(SUBSCRIPTION_MESSAGES.ALREADY_SUBSCRIBED, 409);
+    if (existing) {
+        throw createError(SUBSCRIPTION_MESSAGES.ALREADY_SUBSCRIBED, 409);
+    }
 
     const repoExists = await githubService.checkRepoExists(normalizedRepo);
-    if (!repoExists) throw createError(SUBSCRIPTION_MESSAGES.REPO_NOT_FOUND, 404);
+    if (!repoExists) {
+        throw createError(SUBSCRIPTION_MESSAGES.REPO_NOT_FOUND, 404);
+    }
 
     const latestRelease = await githubService.getLatestRelease(normalizedRepo);
     const lastSeenTag = latestRelease ? latestRelease.tag : null;
@@ -47,7 +42,7 @@ async function subscribe(email, repo) {
 
     try {
         await emailService.sendConfirmationEmail(normalizedEmail, normalizedRepo, confirmToken, unsubscribeToken);
-    } catch (err) {
+    } catch {
         try {
             await subscriptionRepo.remove(created.id);
         } catch (rollbackErr) {
@@ -69,7 +64,9 @@ async function confirmSubscription(token) {
     assertValid(validateToken(token));
 
     const subscription = await subscriptionRepo.findByConfirmToken(token);
-    if (!subscription) throw createError(SUBSCRIPTION_MESSAGES.TOKEN_NOT_FOUND, 404);
+    if (!subscription) {
+        throw createError(SUBSCRIPTION_MESSAGES.TOKEN_NOT_FOUND, 404);
+    }
 
     if (subscription.confirmed) {
         return { message: SUBSCRIPTION_MESSAGES.ALREADY_CONFIRMED };
@@ -83,7 +80,9 @@ async function unsubscribe(token) {
     assertValid(validateToken(token));
 
     const subscription = await subscriptionRepo.findByUnsubscribeToken(token);
-    if (!subscription) throw createError(SUBSCRIPTION_MESSAGES.TOKEN_NOT_FOUND, 404);
+    if (!subscription) {
+        throw createError(SUBSCRIPTION_MESSAGES.TOKEN_NOT_FOUND, 404);
+    }
 
     if (!subscription.confirmed) {
         throw createError(SUBSCRIPTION_MESSAGES.NOT_CONFIRMED, 409);
@@ -99,11 +98,13 @@ async function getSubscriptions(email) {
     const normalizedEmail = email.trim().toLowerCase();
     const subs = await subscriptionRepo.findAllByEmail(normalizedEmail);
 
-    return subs.map((s) => ({
-        email: s.email,
-        repo: s.repo,
-        confirmed: s.confirmed,
-        last_seen_tag: s.last_seen_tag,
+    return subs.map(({
+        email: subscriptionEmail, repo, confirmed, last_seen_tag,
+    }) => ({
+        email: subscriptionEmail,
+        repo,
+        confirmed,
+        last_seen_tag,
     }));
 }
 
