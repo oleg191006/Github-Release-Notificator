@@ -1,9 +1,9 @@
 const { v4: uuidv4 } = require('uuid');
-const subscriptionRepo = require('@/repositories/subscriptionRepository');
-const githubService = require('./githubService');
-const emailService = require('./emailService');
+const subscriptionRepo = require('./subscription.repository');
+const githubService = require('@/modules/github/github.service');
+const notificationClient = require('@/modules/notification/notification.client');
 const config = require('@/config');
-const { validateEmail, validateRepo, validateToken } = require('@/validators/subscription');
+const { validateEmail, validateRepo, validateToken } = require('./subscription.validator');
 const logger = require('@/utils/logger');
 const { createError, assertValid } = require('@/utils/validation');
 const { SUBSCRIPTION_MESSAGES } = require('@/constants/messages');
@@ -11,7 +11,7 @@ const { SUBSCRIPTION_MESSAGES } = require('@/constants/messages');
 function createSubscriptionService(deps = {}) {
     const subscriptionRepository = deps.subscriptionRepo || subscriptionRepo;
     const github = deps.githubService || githubService;
-    const email = deps.emailService || emailService;
+    const notification = deps.notificationClient || notificationClient;
     const generateToken = deps.generateToken || uuidv4;
 
     async function subscribe(emailAddr, repoName) {
@@ -46,7 +46,7 @@ function createSubscriptionService(deps = {}) {
         });
 
         try {
-            await email.sendConfirmationEmail(normalizedEmail, normalizedRepo, confirmToken, unsubscribeToken);
+            await notification.sendConfirmationEmail(normalizedEmail, normalizedRepo, confirmToken, unsubscribeToken);
         } catch {
             try {
                 await subscriptionRepository.remove(created.id);

@@ -4,8 +4,8 @@ const cors = require('cors');
 const apiKeyAuth = require('@/middleware/apiKey');
 const metricsMiddleware = require('@/middleware/metricsMiddleware');
 const errorHandler = require('@/middleware/errorHandler');
-const subscriptionRoutes = require('@/routes/subscription');
-const { initMetrics, getMetricsPayload, getMetricsContentType } = require('@/metrics');
+const subscriptionRoutes = require('@/modules/subscription/subscription.routes');
+const {initMetrics, getMetricsPayload, getMetricsContentType } = require('@/metrics');
 
 function createApp() {
     const app = express();

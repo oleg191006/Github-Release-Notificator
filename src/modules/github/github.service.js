@@ -1,4 +1,4 @@
-const githubClient = require('@/infrastructure/github/apiClient');
+const githubClient = require('./github.apiClient');
 const config = require('@/config');
 const logger = require('@/utils/logger');
 const redisCache = require('@/cache/redisCache');

@@ -1,8 +1,8 @@
 const logger = require('@/utils/logger');
-const githubService = require('./githubService');
-const emailService = require('./emailService');
-const subscriptionRepo = require('@/repositories/subscriptionRepository');
-const repoRepo = require('@/repositories/repoRepository');
+const githubService = require('@/modules/github/github.service');
+const notificationClient = require('@/modules/notification/notification.client');
+const subscriptionRepo = require('@/modules/subscription/subscription.repository');
+const repoRepo = require('./repo.repository');
 
 
 
@@ -55,7 +55,7 @@ async function checkRepoForNewRelease(repo) {
         }
 
         try {
-            await emailService.sendReleaseNotification(
+            await notificationClient.sendReleaseNotification(
                 sub.email,
                 repo,
                 latestRelease,

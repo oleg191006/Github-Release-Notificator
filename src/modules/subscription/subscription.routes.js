@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const subscriptionService = require('@/services/subscriptionService');
+const subscriptionService = require('./subscription.service');
 
 const router = Router();
 
