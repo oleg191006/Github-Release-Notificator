@@ -5,7 +5,7 @@ const logger = require('./utils/logger');
 const createApp = require('./app');
 const { runMigrations } = require('./db/migrations');
 const { close: closeDb } = require('./db/connection');
-const scanner = require('./modules/scanner/scanner.service');
+const scanner = require('./modules/scanner/scannerService');
 const scheduler = require('./infrastructure/scheduler');
 
 async function main() {

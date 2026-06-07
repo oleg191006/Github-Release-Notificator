@@ -7,6 +7,7 @@ const errorHandler = require('@/middleware/errorHandler');
 const subscriptionRoutes = require('@/modules/subscription/subscription.routes');
 const {initMetrics, getMetricsPayload, getMetricsContentType } = require('@/metrics');
 
+
 function createApp() {
     const app = express();
 
