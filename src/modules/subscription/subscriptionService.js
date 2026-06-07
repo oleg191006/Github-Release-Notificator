@@ -1,9 +1,9 @@
 const { v4: uuidv4 } = require('uuid');
-const subscriptionRepo = require('./subscription.repository');
-const githubService = require('@/modules/github/github.service');
-const notificationClient = require('@/modules/notification/notification.client');
+const subscriptionRepo = require('./subscriptionRepository');
+const githubService = require('@/modules/github/githubService');
+const notificationClient = require('@/modules/notification/notificationClient');
 const config = require('@/config');
-const { validateEmail, validateRepo, validateToken } = require('./subscription.validator');
+const { validateEmail, validateRepo, validateToken } = require('./subscriptionValidator');
 const logger = require('@/utils/logger');
 const { createError, assertValid } = require('@/utils/validation');
 const { SUBSCRIPTION_MESSAGES } = require('@/constants/messages');

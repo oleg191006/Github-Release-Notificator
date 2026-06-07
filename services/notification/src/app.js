@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const notificationRoutes = require('./routes/notification.routes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 function createApp() {
     const app = express();

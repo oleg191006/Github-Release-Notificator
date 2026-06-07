@@ -1,6 +1,6 @@
-const resendProvider = require('../providers/resend.provider');
-const smtpProvider = require('../providers/smtp.provider');
-const templates = require('../templates/email.templates');
+const resendProvider = require('../providers/resendProvider');
+const smtpProvider = require('../providers/smtpProvider');
+const templates = require('../templates/emailTemplates');
 const logger = require('../logger');
 
 async function sendMail(mailOptions) {

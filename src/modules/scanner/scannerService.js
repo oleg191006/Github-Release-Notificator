@@ -1,8 +1,9 @@
 const logger = require('@/utils/logger');
-const githubService = require('@/modules/github/github.service');
-const notificationClient = require('@/modules/notification/notification.client');
-const subscriptionRepo = require('@/modules/subscription/subscription.repository');
-const repoRepo = require('./repo.repository');
+const githubService = require('@/modules/github/githubService');
+const notificationClient = require('@/modules/notification/notificationClient');
+const subscriptionRepo = require('@/modules/subscription/subscriptionRepository');
+const repoRepo = require('./repoRepository');
+
 
 
 
