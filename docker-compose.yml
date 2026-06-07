@@ -80,6 +80,30 @@ services:
       - grafanadata:/var/lib/grafana
     depends_on:
       - prometheus
+  notification:
+    build:
+      context: ./services/notification
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_REJECT_UNAUTHORIZED: ${SMTP_REJECT_UNAUTHORIZED:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      EMAIL_FROM: ${EMAIL_FROM:-GitHub Notificator <noreply@notificator.app>}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM: ${RESEND_FROM:-GitHub Notificator <onboarding@resend.dev>}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', r => { process.exit(r.statusCode === 200 ? 0 : 1) })"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   app:
     build:
@@ -92,6 +116,7 @@ services:
       redis:
         condition: service_started
       elasticsearch:
+      notification:
         condition: service_healthy
     ports:
       - "3000:3000"
@@ -108,13 +133,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       REDIS_CONNECT_TIMEOUT_MS: ${REDIS_CONNECT_TIMEOUT_MS:-5000}
       GITHUB_CACHE_TTL_SECONDS: ${GITHUB_CACHE_TTL_SECONDS:-600}
-      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_SECURE: ${SMTP_SECURE:-false}
-      SMTP_REJECT_UNAUTHORIZED: ${SMTP_REJECT_UNAUTHORIZED:-true}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
-      EMAIL_FROM: ${EMAIL_FROM:-GitHub Notificator <noreply@notificator.app>}
+      NOTIFICATION_SERVICE_URL: http://notification:3001
       SCAN_CRON: ${SCAN_CRON:-*/10 * * * *}
       APP_URL: ${APP_URL:-http://localhost:3000}
       ELASTICSEARCH_URL: http://elasticsearch:9200
