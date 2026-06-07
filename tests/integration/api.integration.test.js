@@ -2,7 +2,6 @@ require('dotenv').config({ path: '.env.test' });
 
 const request = require('supertest');
 const axios = require('axios');
-const nodemailer = require('nodemailer');
 const { query, close } = require('@/db/connection');
 const { stopMetrics } = require('@/metrics');
 const { runMigrations } = require('@/db/migrations');
@@ -10,16 +9,14 @@ const { runMigrations } = require('@/db/migrations');
 const redisCache = require('@/cache/redisCache');
 
 jest.mock('axios');
-jest.mock('nodemailer');
 
 const mockAxiosInstance = { get: jest.fn() };
-const mockSendMail = jest.fn().mockResolvedValue({});
 
 let app;
 
 beforeAll(async () => {
     axios.create.mockReturnValue(mockAxiosInstance);
-    nodemailer.createTransport.mockReturnValue({ sendMail: mockSendMail });
+    axios.post.mockResolvedValue({ data: { success: true } });
 
     await runMigrations();
     app = require('@/app')();
@@ -28,6 +25,8 @@ beforeAll(async () => {
 afterEach(async () => {
     await query('TRUNCATE TABLE subscriptions, repositories RESTART IDENTITY CASCADE;');
     jest.clearAllMocks();
+    axios.create.mockReturnValue(mockAxiosInstance);
+    axios.post.mockResolvedValue({ data: { success: true } });
 });
 
 afterAll(async () => {

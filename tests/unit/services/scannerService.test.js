@@ -1,13 +1,13 @@
-const { scanForNewReleases, checkRepoForNewRelease } = require('@/services/scannerService');
-const subscriptionRepo = require('@/repositories/subscriptionRepository');
-const repoRepo = require('@/repositories/repoRepository');
-const githubService = require('@/services/githubService');
-const emailService = require('@/services/emailService');
+const { scanForNewReleases, checkRepoForNewRelease } = require('@/modules/scanner/scannerService');
+const subscriptionRepo = require('@/modules/subscription/subscriptionRepository');
+const repoRepo = require('@/modules/scanner/repoRepository');
+const githubService = require('@/modules/github/githubService');
+const notificationClient = require('@/modules/notification/notificationClient');
 
-jest.mock('@/repositories/subscriptionRepository');
-jest.mock('@/repositories/repoRepository');
-jest.mock('@/services/githubService');
-jest.mock('@/services/emailService');
+jest.mock('@/modules/subscription/subscriptionRepository');
+jest.mock('@/modules/scanner/repoRepository');
+jest.mock('@/modules/github/githubService');
+jest.mock('@/modules/notification/notificationClient');
 
 afterEach(() => {
     jest.clearAllMocks();
@@ -67,7 +67,7 @@ describe('checkRepoForNewRelease', () => {
         await checkRepoForNewRelease(repo);
 
         expect(repoRepo.upsert).not.toHaveBeenCalled();
-        expect(emailService.sendReleaseNotification).not.toHaveBeenCalled();
+        expect(notificationClient.sendReleaseNotification).not.toHaveBeenCalled();
     });
 
     it('should notify subscribers when new release is detected', async () => {
@@ -78,13 +78,13 @@ describe('checkRepoForNewRelease', () => {
             { id: 1, email: 'user1@example.com', last_seen_tag: 'v1.21.0', unsubscribe_token: 'tok1' },
             { id: 2, email: 'user2@example.com', last_seen_tag: 'v1.21.0', unsubscribe_token: 'tok2' },
         ]);
-        emailService.sendReleaseNotification.mockResolvedValue();
+        notificationClient.sendReleaseNotification.mockResolvedValue();
         subscriptionRepo.updateLastSeenTag.mockResolvedValue();
 
         await checkRepoForNewRelease(repo);
 
         expect(repoRepo.upsert).toHaveBeenCalledWith(repo, 'v1.22.0');
-        expect(emailService.sendReleaseNotification).toHaveBeenCalledTimes(2);
+        expect(notificationClient.sendReleaseNotification).toHaveBeenCalledTimes(2);
         expect(subscriptionRepo.updateLastSeenTag).toHaveBeenCalledTimes(2);
         expect(subscriptionRepo.updateLastSeenTag).toHaveBeenCalledWith(1, 'v1.22.0');
         expect(subscriptionRepo.updateLastSeenTag).toHaveBeenCalledWith(2, 'v1.22.0');
@@ -100,7 +100,7 @@ describe('checkRepoForNewRelease', () => {
 
         await checkRepoForNewRelease(repo);
 
-        expect(emailService.sendReleaseNotification).not.toHaveBeenCalled();
+        expect(notificationClient.sendReleaseNotification).not.toHaveBeenCalled();
         expect(subscriptionRepo.updateLastSeenTag).not.toHaveBeenCalled();
     });
 
@@ -111,13 +111,13 @@ describe('checkRepoForNewRelease', () => {
         subscriptionRepo.findConfirmedByRepo.mockResolvedValue([
             { id: 1, email: 'user@example.com', last_seen_tag: null, unsubscribe_token: 'tok1' },
         ]);
-        emailService.sendReleaseNotification.mockResolvedValue();
+        notificationClient.sendReleaseNotification.mockResolvedValue();
         subscriptionRepo.updateLastSeenTag.mockResolvedValue();
 
         await checkRepoForNewRelease(repo);
 
         expect(repoRepo.upsert).toHaveBeenCalledWith(repo, 'v1.22.0');
-        expect(emailService.sendReleaseNotification).toHaveBeenCalledTimes(1);
+        expect(notificationClient.sendReleaseNotification).toHaveBeenCalledTimes(1);
     });
 
     it('should continue notifying other subscribers if one fails', async () => {
@@ -128,14 +128,14 @@ describe('checkRepoForNewRelease', () => {
             { id: 1, email: 'fail@example.com', last_seen_tag: 'v1.21.0', unsubscribe_token: 'tok1' },
             { id: 2, email: 'ok@example.com', last_seen_tag: 'v1.21.0', unsubscribe_token: 'tok2' },
         ]);
-        emailService.sendReleaseNotification
+        notificationClient.sendReleaseNotification
             .mockRejectedValueOnce(new Error('SMTP error'))
             .mockResolvedValueOnce();
         subscriptionRepo.updateLastSeenTag.mockResolvedValue();
 
         await checkRepoForNewRelease(repo);
 
-        expect(emailService.sendReleaseNotification).toHaveBeenCalledTimes(2);
+        expect(notificationClient.sendReleaseNotification).toHaveBeenCalledTimes(2);
         expect(subscriptionRepo.updateLastSeenTag).toHaveBeenCalledTimes(1);
         expect(subscriptionRepo.updateLastSeenTag).toHaveBeenCalledWith(2, 'v1.22.0');
     });

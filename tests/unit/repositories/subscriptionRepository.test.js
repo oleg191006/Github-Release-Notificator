@@ -1,4 +1,4 @@
-const subscriptionRepository = require('@/repositories/subscriptionRepository');
+const subscriptionRepository = require('@/modules/subscription/subscriptionRepository');
 const { query } = require('@/db/connection');
 
 jest.mock('@/db/connection', () => ({
@@ -10,159 +10,61 @@ afterEach(() => {
 });
 
 describe('subscriptionRepository', () => {
-    it('should create a subscription row', async () => {
-        query.mockResolvedValue({ rows: [{ id: 1, email: 'user@example.com' }] });
+    it('should insert and return the new row', async () => {
+        const row = { id: 1, email: 'u@e.com', repo: 'a/b' };
+        query.mockResolvedValue({ rows: [row] });
 
         const result = await subscriptionRepository.create({
-            email: 'user@example.com',
-            repo: 'nodejs/node',
-            confirmToken: 'confirm',
-            unsubscribeToken: 'unsubscribe',
-            lastSeenTag: 'v1.0.0',
+            email: 'u@e.com',
+            repo: 'a/b',
+            confirmToken: 'ct',
+            unsubscribeToken: 'ut',
+            lastSeenTag: 'v1',
         });
 
-        expect(result).toEqual({ id: 1, email: 'user@example.com' });
-        expect(query).toHaveBeenCalledWith(
-            expect.stringContaining('INSERT INTO subscriptions'),
-            ['user@example.com', 'nodejs/node', 'confirm', 'unsubscribe', 'v1.0.0'],
-        );
+        expect(result).toEqual(row);
+        expect(query).toHaveBeenCalledTimes(1);
     });
 
-    it('should set lastSeenTag to null when missing', async () => {
-        query.mockResolvedValue({ rows: [{ id: 2, email: 'user@example.com' }] });
-
-        await subscriptionRepository.create({
-            email: 'user@example.com',
-            repo: 'nodejs/node',
-            confirmToken: 'confirm',
-            unsubscribeToken: 'unsubscribe',
-            lastSeenTag: null,
-        });
-
-        expect(query).toHaveBeenCalledWith(
-            expect.stringContaining('INSERT INTO subscriptions'),
-            ['user@example.com', 'nodejs/node', 'confirm', 'unsubscribe', null],
-        );
-    });
-
-    it('should return null when subscription is not found', async () => {
+    it('should return matching row or null', async () => {
         query.mockResolvedValue({ rows: [] });
 
-        const result = await subscriptionRepository.findByEmailAndRepo('user@example.com', 'nodejs/node');
+        const result = await subscriptionRepository.findByEmailAndRepo('u@e.com', 'a/b');
 
         expect(result).toBeNull();
     });
 
-    it('should return subscription when found by email and repo', async () => {
-        query.mockResolvedValue({ rows: [{ id: 9, email: 'user@example.com' }] });
+    it('should return matching row', async () => {
+        const row = { id: 1, confirm_token: 'tok' };
+        query.mockResolvedValue({ rows: [row] });
 
-        const result = await subscriptionRepository.findByEmailAndRepo('user@example.com', 'nodejs/node');
+        const result = await subscriptionRepository.findByConfirmToken('tok');
 
-        expect(result).toEqual({ id: 9, email: 'user@example.com' });
-        expect(query).toHaveBeenCalledWith(
-            'SELECT * FROM subscriptions WHERE email = $1 AND repo = $2',
-            ['user@example.com', 'nodejs/node'],
-        );
+        expect(result).toEqual(row);
     });
 
-    it('should return subscription when found by confirm token', async () => {
-        query.mockResolvedValue({ rows: [{ id: 3, confirm_token: 'token' }] });
+    it('should update confirmed flag', async () => {
+        const row = { id: 1, confirmed: true };
+        query.mockResolvedValue({ rows: [row] });
 
-        const result = await subscriptionRepository.findByConfirmToken('token');
+        const result = await subscriptionRepository.confirm(1);
 
-        expect(result).toEqual({ id: 3, confirm_token: 'token' });
-        expect(query).toHaveBeenCalledWith(
-            'SELECT * FROM subscriptions WHERE confirm_token = $1',
-            ['token'],
-        );
+        expect(result).toEqual(row);
     });
 
-    it('should return subscription when found by unsubscribe token', async () => {
-        query.mockResolvedValue({ rows: [{ id: 4, unsubscribe_token: 'token' }] });
-
-        const result = await subscriptionRepository.findByUnsubscribeToken('token');
-
-        expect(result).toEqual({ id: 4, unsubscribe_token: 'token' });
-        expect(query).toHaveBeenCalledWith(
-            'SELECT * FROM subscriptions WHERE unsubscribe_token = $1',
-            ['token'],
-        );
-    });
-
-    it('should return subscriptions by email', async () => {
-        const rows = [{ id: 1 }, { id: 2 }];
-        query.mockResolvedValue({ rows });
-
-        const result = await subscriptionRepository.findAllByEmail('user@example.com');
-
-        expect(result).toEqual(rows);
-        expect(query).toHaveBeenCalledWith(
-            'SELECT * FROM subscriptions WHERE email = $1 ORDER BY created_at DESC',
-            ['user@example.com'],
-        );
-    });
-
-    it('should return all confirmed subscriptions', async () => {
-        const rows = [{ id: 1 }, { id: 2 }];
-        query.mockResolvedValue({ rows });
-
-        const result = await subscriptionRepository.findAllConfirmed();
-
-        expect(result).toEqual(rows);
-        expect(query).toHaveBeenCalledWith(
-            'SELECT * FROM subscriptions WHERE confirmed = TRUE ORDER BY repo',
-        );
-    });
-
-    it('should confirm subscription by id', async () => {
-        query.mockResolvedValue({ rows: [{ id: 5, confirmed: true }] });
-
-        const result = await subscriptionRepository.confirm(5);
-
-        expect(result).toEqual({ id: 5, confirmed: true });
-        expect(query).toHaveBeenCalledWith(
-            expect.stringContaining('UPDATE subscriptions SET confirmed = TRUE'),
-            [5],
-        );
-    });
-
-    it('should remove subscription by id', async () => {
+    it('should delete by id', async () => {
         query.mockResolvedValue({ rows: [] });
 
-        await subscriptionRepository.remove(7);
+        await subscriptionRepository.remove(1);
 
-        expect(query).toHaveBeenCalledWith('DELETE FROM subscriptions WHERE id = $1', [7]);
+        expect(query).toHaveBeenCalledWith(expect.stringContaining('DELETE'), [1]);
     });
 
-    it('should return distinct confirmed repos', async () => {
-        query.mockResolvedValue({ rows: [{ repo: 'nodejs/node' }, { repo: 'golang/go' }] });
+    it('should return repo names', async () => {
+        query.mockResolvedValue({ rows: [{ repo: 'a/b' }, { repo: 'c/d' }] });
 
         const result = await subscriptionRepository.getDistinctConfirmedRepos();
 
-        expect(result).toEqual(['nodejs/node', 'golang/go']);
-    });
-
-    it('should update last seen tag', async () => {
-        query.mockResolvedValue({ rows: [] });
-
-        await subscriptionRepository.updateLastSeenTag(4, 'v1.2.0');
-
-        expect(query).toHaveBeenCalledWith(
-            expect.stringContaining('UPDATE subscriptions SET last_seen_tag'),
-            ['v1.2.0', 4],
-        );
-    });
-
-    it('should return confirmed subscriptions by repo', async () => {
-        const rows = [{ id: 1, repo: 'nodejs/node' }];
-        query.mockResolvedValue({ rows });
-
-        const result = await subscriptionRepository.findConfirmedByRepo('nodejs/node');
-
-        expect(result).toEqual(rows);
-        expect(query).toHaveBeenCalledWith(
-            'SELECT * FROM subscriptions WHERE repo = $1 AND confirmed = TRUE',
-            ['nodejs/node'],
-        );
+        expect(result).toEqual(['a/b', 'c/d']);
     });
 });

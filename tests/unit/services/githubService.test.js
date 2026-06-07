@@ -1,9 +1,9 @@
 
-const githubService = require('@/services/githubService');
-const githubApiClient = require('@/infrastructure/github/apiClient');
+const githubService = require('@/modules/github/githubService');
+const githubApiClient = require('@/modules/github/githubApiClient');
 const redisCache = require('@/cache/redisCache');
 
-jest.mock('@/infrastructure/github/apiClient');
+jest.mock('@/modules/github/githubApiClient');
 jest.mock('@/cache/redisCache');
 
 beforeEach(() => {
