@@ -11,7 +11,11 @@ function createApp() {
     app.use('/api/notify', notificationRoutes);
 
     app.get('/health', (_req, res) => {
-        res.json({ status: 'ok', service: 'notification', timestamp: new Date().toISOString() });
+        res.json({
+            status: 'ok',
+            service: 'notification',
+            timestamp: new Date().toISOString(),
+        });
     });
 
     app.use((err, _req, res, _next) => {
