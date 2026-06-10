@@ -8,16 +8,20 @@ function getBaseUrl() {
 
 async function sendConfirmationEmail(email, repo, confirmToken, unsubscribeToken) {
     const confirmUrl = `${config.appUrl}/api/confirm/${confirmToken}`;
+    try {
+        await axios.post(`${getBaseUrl()}/api/notify/confirmation`, {
+            to: email,
+            repo,
+            confirmUrl,
+            unsubscribeToken,
+        }, { timeout: 15000 });
 
-    await axios.post(`${getBaseUrl()}/api/notify/confirmation`, {
-        to: email,
-        repo,
-        confirmUrl,
-        unsubscribeToken,
-    }, { timeout: 15000 });
-
-    logger.info(`Confirmation notification dispatched for ${email} (${repo})`);
+        logger.info(`Confirmation notification dispatched for ${email} (${repo})`);
+    } catch (err) {
+        logger.error(`Failed to dispatch confirmation notification for ${email}`, err.message);
+    }
 }
+
 
 async function sendReleaseNotification(email, repo, release, unsubscribeToken) {
     const unsubscribeUrl = `${config.appUrl}/api/unsubscribe/${unsubscribeToken}`;
