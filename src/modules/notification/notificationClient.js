@@ -19,6 +19,7 @@ async function sendConfirmationEmail(email, repo, confirmToken, unsubscribeToken
         logger.info(`Confirmation notification dispatched for ${email} (${repo})`);
     } catch (err) {
         logger.error(`Failed to dispatch confirmation notification for ${email}`, err.message);
+        throw err;
     }
 }
 
