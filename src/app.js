@@ -4,7 +4,7 @@ const cors = require('cors');
 const apiKeyAuth = require('@/middleware/apiKey');
 const metricsMiddleware = require('@/middleware/metricsMiddleware');
 const errorHandler = require('@/middleware/errorHandler');
-const subscriptionRoutes = require('@/modules/subscription/subscription.routes');
+const subscriptionRoutes = require('@/modules/subscription/subscriptionRoutes');
 const {initMetrics, getMetricsPayload, getMetricsContentType } = require('@/metrics');
 
 
