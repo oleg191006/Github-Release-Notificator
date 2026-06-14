@@ -1,7 +1,7 @@
 const { Worker } = require('bullmq');
 const { NOTIFICATION_QUEUE, EventTypes } = require('./eventTypes');
 const emailService = require('../services/emailService');
-const logger = require('../loggerger');
+const logger = require('../logger');
 
 function createJobProcessor(deps = {}) {
     const email = deps.emailService || emailService;
