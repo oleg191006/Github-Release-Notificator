@@ -3,42 +3,36 @@ const { NOTIFICATION_QUEUE, EventTypes } = require('./eventTypes');
 const emailService = require('../services/emailService');
 const logger = require('../logger');
 
-function createJobProcessor(deps = {}) {
-    const email = deps.emailService || emailService;
+async function processJob(job) {
+    logger.info(`Processing job ${job.id} [${job.name}]`, { data: job.data });
 
-    return async function processJob(job) {
-        logger.info(`Processing job ${job.id} [${job.name}]`, { data: job.data });
-
-        switch (job.name) {
-        case EventTypes.SEND_CONFIRMATION_EMAIL: {
-            const { to, repo, confirmUrl, unsubscribeToken } = job.data;
-            if (!to || !repo || !confirmUrl) {
-                throw new Error('Missing required fields: to, repo, confirmUrl');
-            }
-            await email.sendConfirmation({ to, repo, confirmUrl, unsubscribeToken });
-            logger.info(`Confirmation email sent to ${to} for ${repo}`, { jobId: job.id });
-            break;
+    switch (job.name) {
+    case EventTypes.SEND_CONFIRMATION_EMAIL: {
+        const { to, repo, confirmUrl, unsubscribeToken } = job.data;
+        if (!to || !repo || !confirmUrl) {
+            throw new Error('Missing required fields: to, repo, confirmUrl');
         }
-        case EventTypes.SEND_RELEASE_NOTIFICATION: {
-            const { to, repo, release, unsubscribeUrl } = job.data;
-            if (!to || !repo || !release) {
-                throw new Error('Missing required fields: to, repo, release');
-            }
-            await email.sendRelease({ to, repo, release, unsubscribeUrl });
-            logger.info(`Release notification sent to ${to} for ${repo}@${release.tag}`, { jobId: job.id });
-            break;
+        await emailService.sendConfirmation({ to, repo, confirmUrl, unsubscribeToken });
+        logger.info(`Confirmation email sent to ${to} for ${repo}`, { jobId: job.id });
+        break;
+    }
+    case EventTypes.SEND_RELEASE_NOTIFICATION: {
+        const { to, repo, release, unsubscribeUrl } = job.data;
+        if (!to || !repo || !release) {
+            throw new Error('Missing required fields: to, repo, release');
         }
-        default:
-            logger.warn(`Unknown event type: ${job.name}`, { jobId: job.id });
-            throw new Error(`Unknown event type: ${job.name}`);
-        }
-    };
+        await emailService.sendRelease({ to, repo, release, unsubscribeUrl });
+        logger.info(`Release notification sent to ${to} for ${repo}@${release.tag}`, { jobId: job.id });
+        break;
+    }
+    default:
+        logger.warn(`Unknown event type: ${job.name}`, { jobId: job.id });
+        throw new Error(`Unknown event type: ${job.name}`);
+    }
 }
 
-function startConsumer(redisConnection, deps = {}) {
-    const processor = createJobProcessor(deps);
-
-    const worker = new Worker(NOTIFICATION_QUEUE, processor, {
+function startConsumer(redisConnection) {
+    const worker = new Worker(NOTIFICATION_QUEUE, processJob, {
         connection: redisConnection,
         concurrency: 5,
     });
@@ -63,4 +57,4 @@ function startConsumer(redisConnection, deps = {}) {
     return worker;
 }
 
-module.exports = { startConsumer, createJobProcessor };
+module.exports = { startConsumer, processJob };

@@ -8,28 +8,15 @@ jest.mock('../../../services/notification/src/logger', () => ({
     error: jest.fn(),
 }));
 
-const { createJobProcessor } = require('../../../services/notification/src/consumers/notificationConsumer');
+const { processJob } = require('../../../services/notification/src/consumers/notificationConsumer');
 const { EventTypes } = require('../../../services/notification/src/consumers/eventTypes');
+const emailService = require('../../../services/notification/src/services/emailService');
+const logger = require('../../../services/notification/src/logger');
 
-describe('notificationConsumer - createJobProcessor', () => {
-    let processor;
-    let mockEmailService;
-    let mockLogger;
-
+describe('notificationConsumer - processJob', () => {
     beforeEach(() => {
-        mockEmailService = {
-            sendConfirmation: jest.fn().mockResolvedValue(),
-            sendRelease: jest.fn().mockResolvedValue(),
-        };
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        };
-        processor = createJobProcessor({
-            emailService: mockEmailService,
-            logger: mockLogger,
-        });
+        emailService.sendConfirmation.mockResolvedValue();
+        emailService.sendRelease.mockResolvedValue();
     });
 
     afterEach(() => {
@@ -49,15 +36,15 @@ describe('notificationConsumer - createJobProcessor', () => {
         };
 
         it('should call emailService.sendConfirmation with correct data', async () => {
-            await processor(validJob);
+            await processJob(validJob);
 
-            expect(mockEmailService.sendConfirmation).toHaveBeenCalledWith({
+            expect(emailService.sendConfirmation).toHaveBeenCalledWith({
                 to: 'user@example.com',
                 repo: 'nodejs/node',
                 confirmUrl: 'http://localhost:3000/api/confirm/token-123',
                 unsubscribeToken: 'unsub-456',
             });
-            expect(mockLogger.info).toHaveBeenCalledWith(
+            expect(logger.info).toHaveBeenCalledWith(
                 expect.stringContaining('Confirmation email sent to user@example.com'),
                 expect.any(Object),
             );
@@ -69,7 +56,7 @@ describe('notificationConsumer - createJobProcessor', () => {
                 data: { ...validJob.data, to: '' },
             };
 
-            await expect(processor(badJob)).rejects.toThrow('Missing required fields: to, repo, confirmUrl');
+            await expect(processJob(badJob)).rejects.toThrow('Missing required fields: to, repo, confirmUrl');
         });
 
         it('should throw when "repo" is missing', async () => {
@@ -78,7 +65,7 @@ describe('notificationConsumer - createJobProcessor', () => {
                 data: { ...validJob.data, repo: '' },
             };
 
-            await expect(processor(badJob)).rejects.toThrow('Missing required fields: to, repo, confirmUrl');
+            await expect(processJob(badJob)).rejects.toThrow('Missing required fields: to, repo, confirmUrl');
         });
 
         it('should throw when "confirmUrl" is missing', async () => {
@@ -87,13 +74,13 @@ describe('notificationConsumer - createJobProcessor', () => {
                 data: { ...validJob.data, confirmUrl: '' },
             };
 
-            await expect(processor(badJob)).rejects.toThrow('Missing required fields: to, repo, confirmUrl');
+            await expect(processJob(badJob)).rejects.toThrow('Missing required fields: to, repo, confirmUrl');
         });
 
         it('should propagate email service errors', async () => {
-            mockEmailService.sendConfirmation.mockRejectedValue(new Error('SMTP timeout'));
+            emailService.sendConfirmation.mockRejectedValue(new Error('SMTP timeout'));
 
-            await expect(processor(validJob)).rejects.toThrow('SMTP timeout');
+            await expect(processJob(validJob)).rejects.toThrow('SMTP timeout');
         });
     });
 
@@ -117,15 +104,15 @@ describe('notificationConsumer - createJobProcessor', () => {
         };
 
         it('should call emailService.sendRelease with correct data', async () => {
-            await processor(validJob);
+            await processJob(validJob);
 
-            expect(mockEmailService.sendRelease).toHaveBeenCalledWith({
+            expect(emailService.sendRelease).toHaveBeenCalledWith({
                 to: 'subscriber@example.com',
                 repo: 'nodejs/node',
                 release,
                 unsubscribeUrl: 'http://localhost:3000/api/unsubscribe/unsub-789',
             });
-            expect(mockLogger.info).toHaveBeenCalledWith(
+            expect(logger.info).toHaveBeenCalledWith(
                 expect.stringContaining('Release notification sent to subscriber@example.com'),
                 expect.any(Object),
             );
@@ -137,7 +124,7 @@ describe('notificationConsumer - createJobProcessor', () => {
                 data: { ...validJob.data, to: '' },
             };
 
-            await expect(processor(badJob)).rejects.toThrow('Missing required fields: to, repo, release');
+            await expect(processJob(badJob)).rejects.toThrow('Missing required fields: to, repo, release');
         });
 
         it('should throw when "repo" is missing', async () => {
@@ -146,7 +133,7 @@ describe('notificationConsumer - createJobProcessor', () => {
                 data: { ...validJob.data, repo: null },
             };
 
-            await expect(processor(badJob)).rejects.toThrow('Missing required fields: to, repo, release');
+            await expect(processJob(badJob)).rejects.toThrow('Missing required fields: to, repo, release');
         });
 
         it('should throw when "release" is missing', async () => {
@@ -155,13 +142,13 @@ describe('notificationConsumer - createJobProcessor', () => {
                 data: { ...validJob.data, release: null },
             };
 
-            await expect(processor(badJob)).rejects.toThrow('Missing required fields: to, repo, release');
+            await expect(processJob(badJob)).rejects.toThrow('Missing required fields: to, repo, release');
         });
 
         it('should propagate email service errors', async () => {
-            mockEmailService.sendRelease.mockRejectedValue(new Error('Resend API limit'));
+            emailService.sendRelease.mockRejectedValue(new Error('Resend API limit'));
 
-            await expect(processor(validJob)).rejects.toThrow('Resend API limit');
+            await expect(processJob(validJob)).rejects.toThrow('Resend API limit');
         });
     });
 
@@ -173,8 +160,8 @@ describe('notificationConsumer - createJobProcessor', () => {
                 data: {},
             };
 
-            await expect(processor(unknownJob)).rejects.toThrow('Unknown event type: unknown-event');
-            expect(mockLogger.warn).toHaveBeenCalledWith(
+            await expect(processJob(unknownJob)).rejects.toThrow('Unknown event type: unknown-event');
+            expect(logger.warn).toHaveBeenCalledWith(
                 'Unknown event type: unknown-event',
                 expect.any(Object),
             );
@@ -194,9 +181,9 @@ describe('notificationConsumer - createJobProcessor', () => {
                 },
             };
 
-            await processor(job);
+            await processJob(job);
 
-            expect(mockLogger.info).toHaveBeenCalledWith(
+            expect(logger.info).toHaveBeenCalledWith(
                 expect.stringContaining('Processing job job-log'),
                 expect.objectContaining({ data: job.data }),
             );
