@@ -4,29 +4,7 @@ const config = require('./config');
 const logger = require('./logger');
 const createApp = require('./app');
 const { startConsumer } = require('./consumers/notificationConsumer');
-
-function getRedisConnection() {
-    const { url } = config.redis;
-    if (!url) {
-        return null;
-    }
-
-    const parsed = new URL(url);
-    return {
-        host: parsed.hostname,
-        port: parseInt(parsed.port, 10) || 6379,
-        password: parsed.password || undefined,
-        maxRetriesPerRequest: null,
-        enableOfflineQueue: false,
-        lazyConnect: true,
-        retryStrategy: (times) => {
-            if (times > 3) {
-                return null;
-            }
-            return Math.min(times * 500, 2000);
-        },
-    };
-}
+const { getRedisConnection } = require('../../../shared/redisConnection');
 
 async function main() {
     try {
@@ -37,7 +15,7 @@ async function main() {
         });
 
         let worker = null;
-        const redisConnection = getRedisConnection();
+        const redisConnection = getRedisConnection(config.redis.url);
 
         if (redisConnection) {
             worker = startConsumer(redisConnection);
