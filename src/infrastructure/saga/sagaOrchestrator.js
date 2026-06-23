@@ -1,6 +1,15 @@
 const { v4: uuidv4 } = require('uuid');
 const logger = require('@/utils/logger');
 
+const DEFAULT_STEP_TIMEOUT = 30000;
+
+function withTimeout(promise,ms, stepName){
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`Step "${stepName}" timed out after ${ms} ms`)), ms)),
+    ]);
+}
+
 const StepStatus = Object.freeze({
     PENDING: 'pending',
     RUNNING: 'running',
@@ -27,10 +36,14 @@ async function executeSaga(sagaDefinition, initialContext = {}, { sagaLog } = {}
     const completedSteps = [];
 
     const log = (event, meta) => sagaLog
-        ? sagaLog.recordSagaEvent({ sagaId, sagaName: name, ...event, ...meta }).catch(() => {})
+        ? sagaLog.recordSagaEvent({ sagaId, sagaName: name, ...event, ...meta }).catch((err) => {
+            logger.warn(`Failed to log saga event for saga [${name}] with ID [${sagaId}]: ${err.message}`, { sagaId, sagaName: name, ...event, ...meta });
+        })
         : Promise.resolve();
     const logStep = (event) => sagaLog
-        ? sagaLog.recordStepEvent({ sagaId, ...event }).catch(() => {})
+        ? sagaLog.recordStepEvent({ sagaId, ...event }).catch((err) => {
+            logger.warn(`Failed to log step event for saga [${name}] with ID [${sagaId}]: ${err.message}`, { sagaId, sagaName: name, ...event });
+        })
         : Promise.resolve();
 
     logger.info(`Saga [${name}] started`, { sagaId });
@@ -44,7 +57,7 @@ async function executeSaga(sagaDefinition, initialContext = {}, { sagaLog } = {}
         await logStep({ stepName: step.name, status: StepStatus.RUNNING });
 
         try {
-            const result = await step.execute(context);
+            const result = await withTimeout(step.execute(context), step.timeout || DEFAULT_STEP_TIMEOUT, step.name);
             if (result && typeof result === 'object') {Object.assign(context, result);}
 
             stepResult.status = StepStatus.COMPLETED;
