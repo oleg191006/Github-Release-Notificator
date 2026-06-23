@@ -5,6 +5,7 @@ const logger = require('./logger');
 const createApp = require('./app');
 const { startConsumer } = require('./consumers/notificationConsumer');
 const { getRedisConnection } = require('../../../shared/redisConnection');
+const { startGrpcServer } = require('./grpc/server');
 
 async function main() {
     try {
@@ -13,6 +14,15 @@ async function main() {
         const server = app.listen(config.port, () => {
             logger.info(`Notification service listening on port ${config.port} (${config.nodeEnv})`);
         });
+
+        const {grpcPort} = config;
+        let grpcServer = null;
+        try {
+            grpcServer = await startGrpcServer(grpcPort);
+            logger.info(`Notification gRPC server started on port ${grpcPort}`);
+        } catch (err) {
+            logger.error(`Failed to start gRPC server: ${err.message}`);
+        }
 
         let worker = null;
         const redisConnection = getRedisConnection(config.redis.url);
@@ -30,6 +40,11 @@ async function main() {
             if (worker) {
                 await worker.close();
                 logger.info('Notification consumer stopped');
+            }
+
+            if (grpcServer) {
+                grpcServer.forceShutdown();
+                logger.info('gRPC server stopped');
             }
 
             server.close(() => {
