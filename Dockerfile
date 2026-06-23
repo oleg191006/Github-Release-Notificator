@@ -21,6 +21,7 @@ COPY package.json ./
 COPY src ./src
 COPY shared ./shared
 COPY public ./public
+COPY proto ./proto
 
 USER appuser
 

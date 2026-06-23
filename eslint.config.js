@@ -3,7 +3,7 @@ const jest = require('eslint-plugin-jest');
 const globals = require('globals');
 
 const ignoreConfig = {
-    ignores: ['coverage/**'],
+    ignores: ['coverage/**', 'src/generated/**'],
 };
 
 const mainConfig = {
