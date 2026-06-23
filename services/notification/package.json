@@ -8,6 +8,8 @@
     "dev": "nodemon src/server.js"
   },
   "dependencies": {
+    "@grpc/grpc-js": "^1.14.4",
+    "@grpc/proto-loader": "^0.8.1",
     "axios": "^1.7.2",
     "bullmq": "^5.78.0",
     "cors": "^2.8.5",
