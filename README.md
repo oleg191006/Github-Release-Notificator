@@ -218,3 +218,68 @@ npm test
 - `npm run lint:fix` - auto-fix lint issues
 - `npm run test:unit` - run tests once
 - `npm test` - run tests with coverage
+- `npm run buf:lint` - lint `.proto` files with buf
+- `npm run buf:generate` - generate JS code from `.proto` files
+
+## gRPC Implementation
+
+### Overview
+
+The inter-service communication between the **Main App** and the **Notification Service** has been extended with gRPC alongside the existing REST API.
+
+### Contract (`.proto`)
+
+The gRPC contract is defined in `proto/notification/v1/notification.proto` with two Unary RPCs:
+
+| RPC | Description |
+|-----|-------------|
+| `SendConfirmation` | Sends a subscription confirmation email |
+| `SendReleaseNotification` | Sends a release notification email |
+
+### Fallback Chain
+
+The notification client uses a three-tier fallback:
+
+1. **BullMQ Queue** (async, preferred) - via Redis
+2. **gRPC** (sync, new) - HTTP/2 + Protobuf to notification service
+3. **REST** (sync, old) - HTTP/1.1 + JSON to notification service
+
+### Configuration
+
+| Variable | Service | Default | Description |
+|----------|---------|---------|-------------|
+| `GRPC_PORT` | Notification | `50051` | gRPC server port |
+| `NOTIFICATION_GRPC_URL` | Main App | `localhost:50051` | gRPC target address |
+
+### Throughput Benchmark: gRPC vs REST
+
+Benchmark measured locally with `autocannon` (REST) and parallel gRPC clients.  
+Each level runs for **10 seconds**, endpoint: stub `SendConfirmation` with no real email sending.
+
+```
+node scripts/benchmark-grpc-vs-rest.js
+```
+
+#### Results
+
+| Connections | Protocol | Req/sec | Lat avg | Lat p50 | Lat p99 | Errors |
+|-------------|----------|--------:|--------:|--------:|--------:|-------:|
+| **10** | REST (HTTP/1.1) | 3 732 | 2.23 ms | 2 ms | 7 ms | 0 |
+| **10** | gRPC (HTTP/2) | 956 | 10.46 ms | 11.56 ms | 31.99 ms | 0 |
+| **100** | REST (HTTP/1.1) | 1 070 | 94.4 ms | 93 ms | 129 ms | 0 |
+| **100** | gRPC (HTTP/2) | 748 | 133.44 ms | 128.98 ms | 290.88 ms | 0 |
+| **1 000** | REST (HTTP/1.1) | 1 095 | 3 303 ms | 3 167 ms | 8 918 ms | **9 984**  |
+| **1 000** | gRPC (HTTP/2) | 815 | 1 190 ms | 1 157 ms | 2 077 ms | **0**  |
+
+#### Analysis of results
+
+**With 10 connections** REST is faster (~3.9x): gRPC has higher overhead for connection initialization (HTTP/2 handshake), which is noticeable under low load.
+
+**With 100 connections** the difference shrinks significantly (REST 1070 vs gRPC 748 rps) as HTTP/2 multiplexing starts to offset the overhead.
+
+**With 1000 connections** the most important result:
+
+- **REST** received **9,984 errors** (`ECONNRESET` / connection dropped) - HTTP/1.1 cannot handle such a number of simultaneous connections, the server starts dropping them
+- **gRPC** worked **without a single error** - HTTP/2 multiplexes all 1000 clients over fewer physical connections, without overloading the server
+
+Average latency at 1000 connections: REST 3,303 ms vs. gRPC 1,190 ms - gRPC is 2.8x better in latency.
