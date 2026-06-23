@@ -1,7 +1,7 @@
 const grpc = require('@grpc/grpc-js');
 const config = require('@/config');
 const logger = require('@/utils/logger');
-const { notificationProto } = require('../proto');
+const { notificationProto } = require('../../../shared/grpcProto');
 
 const DEFAULT_DEADLINE_MS = 15000;
 

@@ -2,7 +2,7 @@ const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 
-const PROTO_PATH = path.resolve(__dirname, '../../proto/notification/v1/notification.proto');
+const PROTO_PATH = path.resolve(__dirname, '../proto/notification/v1/notification.proto');
 
 const LOADER_OPTIONS = {
     keepCase: false,

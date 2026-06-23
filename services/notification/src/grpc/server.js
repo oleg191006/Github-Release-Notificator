@@ -1,6 +1,6 @@
 const grpc = require('@grpc/grpc-js');
 const logger = require('../logger');
-const { notificationProto } = require('./proto');
+const { notificationProto } = require('../../../../shared/grpcProto');
 const { sendConfirmation } = require('./handlers/confirmationHandler');
 const { sendReleaseNotification } = require('./handlers/releaseHandler');
 
