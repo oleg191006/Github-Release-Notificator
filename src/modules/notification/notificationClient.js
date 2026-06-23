@@ -2,6 +2,7 @@ const axios = require('axios');
 const config = require('@/config');
 const logger = require('@/utils/logger');
 const eventPublisher = require('@/infrastructure/messageBroker/eventPublisher');
+const { sendConfirmationViaGrpc, sendReleaseNotificationViaGrpc } = require('@/grpc/clients/notificationClient');
 
 function getBaseUrl() {
     return config.notificationServiceUrl || 'http://localhost:3001';
@@ -24,7 +25,15 @@ async function sendConfirmationEmail(email, repo, confirmToken, unsubscribeToken
             return;
         }
     } catch (err) {
-        logger.warn(`Failed to queue confirmation email, falling back to HTTP: ${err.message}`);
+        logger.warn(`Failed to queue confirmation email, falling back to gRPC: ${err.message}`);
+    }
+
+    try {
+        await sendConfirmationViaGrpc({ to: email, repo, confirmUrl, unsubscribeToken });
+        logger.info(`Confirmation notification dispatched via gRPC for ${email} (${repo})`);
+        return;
+    } catch (err) {
+        logger.warn(`gRPC confirmation failed, falling back to REST: ${err.message}`);
     }
 
     try {
@@ -51,7 +60,15 @@ async function sendReleaseNotification(email, repo, release, unsubscribeToken) {
             return;
         }
     } catch (err) {
-        logger.warn(`Failed to queue release notification, falling back to HTTP: ${err.message}`);
+        logger.warn(`Failed to queue release notification, falling back to gRPC: ${err.message}`);
+    }
+
+    try {
+        await sendReleaseNotificationViaGrpc({ to: email, repo, release, unsubscribeUrl });
+        logger.info(`Release notification dispatched via gRPC for ${email} (${repo}@${release.tag})`);
+        return;
+    } catch (err) {
+        logger.warn(`gRPC release notification failed, falling back to REST: ${err.message}`);
     }
 
     try {
