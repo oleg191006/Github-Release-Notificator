@@ -1,11 +1,11 @@
-const subscriptionService = require('@/services/subscriptionService');
-const subscriptionRepo = require('@/repositories/subscriptionRepository');
-const githubService = require('@/services/githubService');
-const emailService = require('@/services/emailService');
+const subscriptionService = require('@/modules/subscription/subscriptionService');
+const subscriptionRepo = require('@/modules/subscription/subscriptionRepository');
+const githubService = require('@/modules/github/githubService');
+const notificationClient = require('@/modules/notification/notificationClient');
 
-jest.mock('@/repositories/subscriptionRepository');
-jest.mock('@/services/githubService');
-jest.mock('@/services/emailService');
+jest.mock('@/modules/subscription/subscriptionRepository');
+jest.mock('@/modules/github/githubService');
+jest.mock('@/modules/notification/notificationClient');
 
 afterEach(() => {
     jest.clearAllMocks();
@@ -49,7 +49,7 @@ describe('subscriptionService.subscribe', () => {
         githubService.checkRepoExists.mockResolvedValue(true);
         githubService.getLatestRelease.mockResolvedValue({ tag: 'v1.21.0', name: 'React 1.21', url: 'https://github.com/facebook/react/releases/tag/v1.21.0' });
         subscriptionRepo.create.mockResolvedValue({ id: 1 });
-        emailService.sendConfirmationEmail.mockResolvedValue();
+        notificationClient.sendConfirmationEmail.mockResolvedValue();
 
         const result = await subscriptionService.subscribe(validEmail, validRepo);
 
@@ -62,7 +62,7 @@ describe('subscriptionService.subscribe', () => {
                 lastSeenTag: 'v1.21.0',
             }),
         );
-        expect(emailService.sendConfirmationEmail).toHaveBeenCalledTimes(1);
+        expect(notificationClient.sendConfirmationEmail).toHaveBeenCalledTimes(1);
     });
 
     it('should set lastSeenTag to null when repo has no releases', async () => {
@@ -70,7 +70,7 @@ describe('subscriptionService.subscribe', () => {
         githubService.checkRepoExists.mockResolvedValue(true);
         githubService.getLatestRelease.mockResolvedValue(null);
         subscriptionRepo.create.mockResolvedValue({ id: 1 });
-        emailService.sendConfirmationEmail.mockResolvedValue();
+        notificationClient.sendConfirmationEmail.mockResolvedValue();
 
         await subscriptionService.subscribe(validEmail, validRepo);
 
@@ -84,7 +84,7 @@ describe('subscriptionService.subscribe', () => {
         githubService.checkRepoExists.mockResolvedValue(true);
         githubService.getLatestRelease.mockResolvedValue(null);
         subscriptionRepo.create.mockResolvedValue({ id: 1 });
-        emailService.sendConfirmationEmail.mockResolvedValue();
+        notificationClient.sendConfirmationEmail.mockResolvedValue();
 
         await subscriptionService.subscribe('User@Example.COM', validRepo);
 

@@ -1,26 +1,11 @@
 const axios = require('axios');
-const config = require('@/config');
-const logger = require('@/utils/logger');
-
+const config = require('../config');
+const logger = require('../logger');
+const errorDetails = require('../errorDetails');
 
 function isAvailable() {
     return Boolean(config.resend.apiKey);
 }
-
-function getErrorDetails(err) {
-    if (err && err.response) {
-        return {
-            status: err.response.status,
-            data: err.response.data,
-        };
-    }
-
-    return {
-        message: err && err.message ? err.message : String(err),
-    };
-}
-
-
 
 async function send(mailOptions) {
     if (!isAvailable()) {
@@ -47,7 +32,7 @@ async function send(mailOptions) {
 
         return true;
     } catch (err) {
-        logger.warn('Failed to send email via Resend API. Falling back to SMTP transport.', getErrorDetails(err));
+        logger.warn('Failed to send email via Resend API. Falling back to SMTP.', errorDetails(err)); 
         return false;
     }
 }

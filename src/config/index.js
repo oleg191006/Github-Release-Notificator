@@ -54,6 +54,8 @@ const config = {
     },
 
     appUrl: process.env.APP_URL || 'http://localhost:3000',
+
+    notificationServiceUrl: process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3001',
 };
 
 module.exports = config;

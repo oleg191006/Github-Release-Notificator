@@ -1,28 +1,26 @@
-const config = require('@/config');
+const config = require('../config');
 
-function confirmationEmail(email, repo, confirmUrl, unsubscribeToken) {
+function confirmationEmail({ to, repo, confirmUrl, unsubscribeToken }) {
     return {
         from: config.smtp.from,
-        to: email,
+        to,
         subject: `Confirm your subscription to ${repo} releases`,
         html: `
       <h2>GitHub Release Notifications</h2>
       <p>You have requested to receive release notifications for <strong>${repo}</strong>.</p>
       <p>Please confirm your subscription by clicking the link below:</p>
       <p><a href="${confirmUrl}">${confirmUrl}</a></p>
-    <p><strong>Unsubscribe token:</strong> ${unsubscribeToken}</p>
-    <p>You can paste this token in the unsubscribe form in the app.</p>
+      <p><strong>Unsubscribe token:</strong> ${unsubscribeToken}</p>
+      <p>You can paste this token in the unsubscribe form in the app.</p>
       <p>If you did not request this, you can safely ignore this email.</p>
     `,
     };
 }
 
-function sendReleaseNotification(email, repo, release, unsubscribeToken) {
-    const unsubscribeUrl = `${config.appUrl}/api/unsubscribe/${unsubscribeToken}`;
-
+function releaseNotification({ to, repo, release, unsubscribeUrl }) {
     return {
         from: config.smtp.from,
-        to: email,
+        to,
         subject: `New release for ${repo}: ${release.tag}`,
         html: `
       <h2>New Release: ${release.name}</h2>
@@ -38,7 +36,4 @@ function sendReleaseNotification(email, repo, release, unsubscribeToken) {
     };
 }
 
-module.exports = {
-    confirmationEmail,
-    sendReleaseNotification,
-};
+module.exports = { confirmationEmail, releaseNotification };

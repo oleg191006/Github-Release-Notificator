@@ -1,4 +1,4 @@
-const repoRepository = require('@/repositories/repoRepository');
+const repoRepository = require('@/modules/scanner/repoRepository');
 const { query } = require('@/db/connection');
 
 jest.mock('@/db/connection', () => ({
@@ -10,23 +10,29 @@ afterEach(() => {
 });
 
 describe('repoRepository', () => {
-    it('should return null when repo is missing', async () => {
+    it('should return matching row or null', async () => {
+        query.mockResolvedValue({ rows: [{ repo: 'a/b', last_seen_tag: 'v1' }] });
+
+        const result = await repoRepository.findByRepo('a/b');
+
+        expect(result).toEqual({ repo: 'a/b', last_seen_tag: 'v1' });
+    });
+
+    it('should return null when no rows', async () => {
         query.mockResolvedValue({ rows: [] });
 
-        const result = await repoRepository.findByRepo('nodejs/node');
+        const result = await repoRepository.findByRepo('x/y');
 
         expect(result).toBeNull();
     });
 
-    it('should upsert repo cache row', async () => {
-        query.mockResolvedValue({ rows: [{ id: 1, repo: 'nodejs/node', last_seen_tag: 'v1.0.0' }] });
+    it('should insert or update and return the row', async () => {
+        const row = { repo: 'a/b', last_seen_tag: 'v2' };
+        query.mockResolvedValue({ rows: [row] });
 
-        const result = await repoRepository.upsert('nodejs/node', 'v1.0.0');
+        const result = await repoRepository.upsert('a/b', 'v2');
 
-        expect(result).toEqual({ id: 1, repo: 'nodejs/node', last_seen_tag: 'v1.0.0' });
-        expect(query).toHaveBeenCalledWith(
-            expect.stringContaining('INSERT INTO repositories'),
-            ['nodejs/node', 'v1.0.0'],
-        );
+        expect(result).toEqual(row);
+        expect(query).toHaveBeenCalledWith(expect.stringContaining('INSERT'), ['a/b', 'v2']);
     });
 });

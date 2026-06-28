@@ -1,7 +1,5 @@
 const nodemailer = require('nodemailer');
-const config = require('@/config');
-
-
+const config = require('../config');
 
 let transporter;
 
@@ -26,7 +24,6 @@ function getTransporter() {
     }
     return transporter;
 }
-
 
 function setTransporter(t) {
     transporter = t;
