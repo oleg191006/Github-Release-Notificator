@@ -3,6 +3,9 @@ require('dotenv').config();
 const config = require('./config');
 const logger = require('./logger');
 const createApp = require('./app');
+const { startConsumer } = require('./consumers/notificationConsumer');
+const { getRedisConnection } = require('../../../shared/redisConnection');
+const { startGrpcServer } = require('./grpc/server');
 
 async function main() {
     try {
@@ -12,8 +15,38 @@ async function main() {
             logger.info(`Notification service listening on port ${config.port} (${config.nodeEnv})`);
         });
 
-        const shutdown = (signal) => {
+        const {grpcPort} = config;
+        let grpcServer = null;
+        try {
+            grpcServer = await startGrpcServer(grpcPort);
+            logger.info(`Notification gRPC server started on port ${grpcPort}`);
+        } catch (err) {
+            logger.error(`Failed to start gRPC server: ${err.message}`);
+        }
+
+        let worker = null;
+        const redisConnection = getRedisConnection(config.redis.url);
+
+        if (redisConnection) {
+            worker = startConsumer(redisConnection);
+            logger.info('Message broker consumer started');
+        } else {
+            logger.warn('REDIS_URL not set — running in HTTP-only mode (no queue consumer)');
+        }
+
+        const shutdown = async (signal) => {
             logger.info(`Received ${signal}. Shutting down...`);
+
+            if (worker) {
+                await worker.close();
+                logger.info('Notification consumer stopped');
+            }
+
+            if (grpcServer) {
+                grpcServer.forceShutdown();
+                logger.info('gRPC server stopped');
+            }
+
             server.close(() => {
                 logger.info('Notification service shut down');
                 process.exit(0);
@@ -21,7 +54,7 @@ async function main() {
 
             setTimeout(() => {
                 process.exit(1);
-            }, 5000);
+            }, 10000);
         };
 
         process.on('SIGTERM', () => shutdown('SIGTERM'));

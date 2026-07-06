@@ -2,7 +2,12 @@ require('dotenv').config();
 
 const config = {
     port: parseInt(process.env.PORT, 10) || 3001,
+    grpcPort: parseInt(process.env.GRPC_PORT, 10) || 50051,
     nodeEnv: process.env.NODE_ENV || 'development',
+
+    redis: {
+        url: process.env.REDIS_URL || '',
+    },
 
     smtp: {
         host: process.env.SMTP_HOST || 'smtp.gmail.com',

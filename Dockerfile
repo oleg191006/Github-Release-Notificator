@@ -19,7 +19,9 @@ RUN apt-get update \
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./
 COPY src ./src
+COPY shared ./shared
 COPY public ./public
+COPY proto ./proto
 
 USER appuser
 

@@ -56,6 +56,7 @@ const config = {
     appUrl: process.env.APP_URL || 'http://localhost:3000',
 
     notificationServiceUrl: process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3001',
+    notificationGrpcUrl: process.env.NOTIFICATION_GRPC_URL || 'localhost:50051',
 };
 
 module.exports = config;
