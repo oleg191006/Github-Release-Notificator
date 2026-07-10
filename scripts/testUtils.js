@@ -1,6 +1,8 @@
 const { spawnSync } = require('child_process');
 
 require('dotenv').config({ path: '.env.test' });
+const fs = require('fs');
+const path = require('path');
 
 const composeFile = 'docker-compose.test.yml';
 
@@ -50,9 +52,100 @@ function buildTestEnv(overrides = {}) {
     };
 }
 
+function createArchitectureTestHelpers({ root, fileLayerMap }) {
+    function extractRequires(filePath) {
+        const absolutePath = path.resolve(root, filePath);
+        if (!fs.existsSync(absolutePath)) {
+            return [];
+        }
+
+        const content = fs.readFileSync(absolutePath, 'utf8');
+        const requires = [];
+
+        const requireRegex = /require\(['"]([^'"]+)['"]\)/g;
+        let match;
+        while ((match = requireRegex.exec(content)) !== null) {
+            requires.push(match[1]);
+        }
+
+        return requires;
+    }
+
+    function resolveImportToFile(importPath, sourceFile) {
+        if (importPath.startsWith('@/')) {
+            return `src/${importPath.slice(2)}`;
+        }
+
+        if (importPath.startsWith('./') || importPath.startsWith('../')) {
+            const sourceDir = path.dirname(sourceFile);
+            return path.posix.normalize(
+                path.posix.join(sourceDir.replace(/\\/g, '/'), importPath),
+            );
+        }
+
+        return null;
+    }
+
+    function findMatchingLayerFile(resolvedPath) {
+        if (!resolvedPath) {
+            return null;
+        }
+
+        const normalized = resolvedPath.replace(/\\/g, '/');
+
+        for (const pattern of Object.keys(fileLayerMap)) {
+            if (
+                normalized === pattern ||
+                normalized === pattern.replace('.js', '') ||
+                `${normalized}.js` === pattern ||
+                `${normalized}/index.js` === pattern ||
+                pattern.startsWith(`${normalized}/`)
+            ) {
+                return pattern;
+            }
+        }
+
+        for (const pattern of Object.keys(fileLayerMap)) {
+            if (pattern.includes(normalized) || normalized.includes(pattern.replace('.js', ''))) {
+                return pattern;
+            }
+        }
+
+        return null;
+    }
+
+
+    function getMappedDependencies(sourceFile) {
+        const requires = extractRequires(sourceFile);
+        const result = [];
+
+        for (const req of requires) {
+            const resolved = resolveImportToFile(req, sourceFile);
+            const targetFile = findMatchingLayerFile(resolved);
+            if (!targetFile) {
+                continue;
+            }
+            result.push({
+                import: req,
+                resolvedTo: targetFile,
+                targetLayer: fileLayerMap[targetFile],
+            });
+        }
+
+        return result;
+    }
+
+    return {
+        extractRequires,
+        resolveImportToFile,
+        findMatchingLayerFile,
+        getMappedDependencies,
+    };
+}
 module.exports = {
     runCommand,
     withCompose,
     resetCompose,
     buildTestEnv,
+    createArchitectureTestHelpers,
 };
