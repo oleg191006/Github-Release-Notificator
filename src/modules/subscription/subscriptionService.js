@@ -40,7 +40,7 @@ function createSubscriptionService(deps = {}) {
 
         const confirmToken = generateToken();
         const unsubscribeToken = generateToken();
-        const confirmUrl = `${config.appUrl}/confirm?token=${confirmToken}`;
+        const confirmUrl = `${config.appUrl}/api/confirm/${confirmToken}`;
 
         const sagaDefinition = createSubscribeSaga({
             subscriptionRepository,
