@@ -13,6 +13,7 @@ function getTransporter() {
             connectionTimeout: config.smtp.connectionTimeoutMs,
             greetingTimeout: config.smtp.greetingTimeoutMs,
             socketTimeout: config.smtp.socketTimeoutMs,
+            family: 4,
             tls: {
                 rejectUnauthorized: config.smtp.rejectUnauthorized,
             },
